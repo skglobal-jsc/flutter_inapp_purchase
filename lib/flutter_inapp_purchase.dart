@@ -624,6 +624,14 @@ class FlutterInappPurchase {
     });
   }
 
+  // Request receipt
+  Future<String> requestReceipt() {
+    if (_platform.isIOS) {
+      return _channel.invokeMethod('requestReceipt');
+    }
+    return Future.value('');
+  }
+
   Future _removePurchaseListener() async {
     if (_purchaseController != null) {
       _purchaseController

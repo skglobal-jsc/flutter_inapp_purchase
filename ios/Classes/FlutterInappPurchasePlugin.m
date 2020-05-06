@@ -573,30 +573,47 @@
 }
 
 - (void) getPurchaseData:(SKPaymentTransaction *)transaction withBlock:(void (^)(NSDictionary *transactionDict))block {
-    [self requestReceiptDataWithBlock:^(NSData *receiptData, NSError *error) {
-        if (receiptData == nil) {
-            block(nil);
-        }
-        else {
-            NSMutableDictionary *purchase = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-                                             @(transaction.transactionDate.timeIntervalSince1970 * 1000), @"transactionDate",
-                                             transaction.transactionIdentifier, @"transactionId",
-                                             transaction.payment.productIdentifier, @"productId",
-                                             [receiptData base64EncodedStringWithOptions:0], @"transactionReceipt",
-                                             [NSNumber numberWithInt: transaction.transactionState], @"transactionStateIOS",
-                                             nil
-                                             ];
-            
-            // originalTransaction is available for restore purchase and purchase of cancelled/expired subscriptions
-            SKPaymentTransaction *originalTransaction = transaction.originalTransaction;
-            if (originalTransaction) {
-                purchase[@"originalTransactionDateIOS"] = @(originalTransaction.transactionDate.timeIntervalSince1970 * 1000);
-                purchase[@"originalTransactionIdentifierIOS"] = originalTransaction.transactionIdentifier;
-            }
-            
-            block(purchase);
-        }
-    }];
+    NSMutableDictionary *purchase = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                     @(transaction.transactionDate.timeIntervalSince1970 * 1000), @"transactionDate",
+                                     transaction.transactionIdentifier, @"transactionId",
+                                     transaction.payment.productIdentifier, @"productId",
+                                     @"", @"transactionReceipt",
+                                     [NSNumber numberWithInt: transaction.transactionState], @"transactionStateIOS",
+                                     nil
+                                     ];
+    
+    // originalTransaction is available for restore purchase and purchase of cancelled/expired subscriptions
+    SKPaymentTransaction *originalTransaction = transaction.originalTransaction;
+    if (originalTransaction) {
+        purchase[@"originalTransactionDateIOS"] = @(originalTransaction.transactionDate.timeIntervalSince1970 * 1000);
+        purchase[@"originalTransactionIdentifierIOS"] = originalTransaction.transactionIdentifier;
+    }
+    
+    block(purchase);
+//    [self requestReceiptDataWithBlock:^(NSData *receiptData, NSError *error) {
+//        if (receiptData == nil) {
+//            block(nil);
+//        }
+//        else {
+//            NSMutableDictionary *purchase = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+//                                             @(transaction.transactionDate.timeIntervalSince1970 * 1000), @"transactionDate",
+//                                             transaction.transactionIdentifier, @"transactionId",
+//                                             transaction.payment.productIdentifier, @"productId",
+//                                             [receiptData base64EncodedStringWithOptions:0], @"transactionReceipt",
+//                                             [NSNumber numberWithInt: transaction.transactionState], @"transactionStateIOS",
+//                                             nil
+//                                             ];
+//
+//            // originalTransaction is available for restore purchase and purchase of cancelled/expired subscriptions
+//            SKPaymentTransaction *originalTransaction = transaction.originalTransaction;
+//            if (originalTransaction) {
+//                purchase[@"originalTransactionDateIOS"] = @(originalTransaction.transactionDate.timeIntervalSince1970 * 1000);
+//                purchase[@"originalTransactionIdentifierIOS"] = originalTransaction.transactionIdentifier;
+//            }
+//
+//            block(purchase);
+//        }
+//    }];
 }
 
 // getAvailablePurchases
@@ -608,6 +625,16 @@
 -(void)paymentQueueRestoreCompletedTransactionsFinished:(SKPaymentQueue *)queue {  ////////   RESTORE
     NSLog(@"\n\n\n  paymentQueueRestoreCompletedTransactionsFinished  \n\n.");
     NSMutableArray* items = [NSMutableArray arrayWithCapacity:queue.transactions.count];
+    
+    // Refresh receipt trigger
+    if (queue.transactions.count > 0) {
+        [self requestReceiptDataWithBlock:^(NSData *data, NSError *error) {
+            if (error == NULL) {
+                // Do nothing
+                NSLog(@"Restored complete");
+            }
+        }];
+    }
     
     for(SKPaymentTransaction *transaction in queue.transactions) {
         if(transaction.transactionState == SKPaymentTransactionStateRestored
