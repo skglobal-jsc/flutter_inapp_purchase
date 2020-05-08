@@ -176,10 +176,11 @@
                 result([receiptData base64EncodedStringWithOptions:0]);
             }
             else {
-                result([FlutterError
-                        errorWithCode:[self standardErrorCode:9]
-                        message:@"Invalid receipt"
-                        details:nil]);
+                result(@"");
+//                result([FlutterError
+//                        errorWithCode:[self standardErrorCode:9]
+//                        message:@"Invalid receipt"
+//                        details:nil]);
             }
         }];
     } else if ([@"getPendingTransactions" isEqualToString:call.method]) {
@@ -196,7 +197,7 @@
                                                      @(item.transactionDate.timeIntervalSince1970 * 1000), @"transactionDate",
                                                      item.transactionIdentifier, @"transactionId",
                                                      item.payment.productIdentifier, @"productId",
-                                                     [receiptData base64EncodedStringWithOptions:0], @"transactionReceipt",
+                                                     @"", @"transactionReceipt",
                                                      [NSNumber numberWithInt: item.transactionState], @"transactionStateIOS",
                                                      nil
                                                      ];
@@ -262,6 +263,13 @@
 #pragma mark ===== StoreKit Delegate
 
 - (void)request:(SKRequest *)request didFailWithError:(NSError *)error {
+    if([request isKindOfClass:[SKReceiptRefreshRequest class]]) {
+        if(receiptBlock) {
+            receiptBlock(nil, error);
+            receiptBlock = nil;
+        }
+        return;
+    }
     NSValue* key = [NSValue valueWithNonretainedObject:request];
     FlutterResult result = [fetchProducts objectForKey:key];
     if (result != nil) {
@@ -764,5 +772,4 @@
         receiptBlock = nil;
     }
 }
-
 @end
